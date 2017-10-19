@@ -9,8 +9,10 @@ import re
 import datetime
 import operator
 import random
+import nltk
+from nltk.corpus import movie_reviews
 from nltk.tokenize import sent_tokenize, word_tokenize
-import sklearn
+#import sklearn
 
 reddit_sleep_time = 3
 writing_process_timeout = 300
@@ -285,6 +287,34 @@ def get_session():
     s.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
     return s
 
+def find_features(document, word_features):
+    words = set(document)
+    features = {}
+    for w in word_features:
+        features[w] = (w in words)
+    return features
+
+
+def run_demo():
+    documents = [(list(movie_reviews.words(fileid)), category)
+                 for category in movie_reviews.categories()
+                 for fileid in movie_reviews.fileids(category)]
+    random.shuffle(documents)
+
+    all_words = []
+    for w in movie_reviews.words():
+        all_words.append(w.lower())
+
+    all_words =nltk.FreqDist(all_words)
+    word_features = list(all_words.keys())[:3000]
+    featuresets = [(find_features(rev, word_features), category) for (rev, category) in documents]
+    training_set = featuresets[:1900]
+    testing_set = featuresets[1900:]
+
+    classifier = nltk.NaiveBayesClassifier.train(training_set)
+    print('accuracy: ', (nltk.classify.accuracy(classifier,testing_set)))
+    print(classifier.show_most_informative_features(15))
+
 
 def run_reader():
     creds=[]
@@ -296,12 +326,13 @@ def run_reader():
     conn.close()
     return main_reader
 
-def analyze_and_posts(main_reader):
     main_reader.read_all(1000)
 
 def main():
-    reader = run_reader()
-    analyze_and_posts(reader)
+    #reader = run_reader()
+    #reader.read_all(1000)
+    run_demo()
+
 
 if __name__ == "__main__":
     main()
